@@ -1,0 +1,36 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background-color: #f8fafc;
+}
+
+.answer-button {
+  @apply w-full py-3 px-4 mb-3 text-left rounded-lg border border-gray-200 hover:border-primary-500 hover:bg-primary-50 transition-all duration-200;
+}
+
+.answer-button.selected {
+  @apply bg-primary-100 border-primary-500;
+}
+
+.progress-bar {
+  @apply h-2 bg-primary-100 rounded-full overflow-hidden;
+}
+
+.progress-bar-fill {
+  @apply h-full bg-primary-500 transition-all duration-300 ease-in-out;
+}
