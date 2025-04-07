@@ -1,20 +1,48 @@
 import React, { useState, useEffect } from 'react';
-import { UserAnswer, SubmissionData, Screener } from './types';
+import { Screener } from './types';
 import ProgressBar from './components/ProgressBar';
 import QuestionScreen from './components/QuestionScreen';
 import CompletionScreen from './components/CompletionScreen';
 import Header from './components/Header';
-import { submitAssessment } from './services/api';
+import ErrorBoundary from './components/ErrorBoundary';
 import { fetchScreenerConfig } from './services/api';
+import { useScreenerForm } from './hooks/useScreenerForm';
 
 function App() {
   const [screenerConfig, setScreenerConfig] = useState<Screener | null>(null);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [userAnswers, setUserAnswers] = useState<UserAnswer[]>([]);
-  const [isCompleted, setIsCompleted] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Call the hook with a default empty screener if screenerConfig is null
+  const {
+    progress,
+    currentQuestion,
+    currentQuestionIndex,
+    totalQuestions,
+    sectionTitle,
+    sectionAnswers,
+    isCompleted,
+    isSubmitting,
+    error: submissionError,
+    handleAnswer,
+    handleRetry,
+  } = useScreenerForm({ 
+    screenerConfig: screenerConfig || {
+      id: '',
+      name: '',
+      disorder: '',
+      content: {
+        sections: [{
+          type: '',
+          title: '',
+          answers: [],
+          questions: []
+        }],
+        display_name: ''
+      },
+      full_name: ''
+    } 
+  });
 
   useEffect(() => {
     const loadScreenerConfig = async () => {
@@ -24,7 +52,7 @@ function App() {
         setScreenerConfig(data);
       } catch (err) {
         console.error('Error fetching screener data:', err);
-        setError('Failed to load screener configuration');
+        setError(err instanceof Error ? err.message : 'Failed to load screener configuration');
       } finally {
         setIsLoading(false);
       }
@@ -57,80 +85,48 @@ function App() {
     );
   }
 
-  const section = screenerConfig.content.sections[0];
-  const totalQuestions = section.questions.length;
-  const currentQuestion = section.questions[currentQuestionIndex];
-  const progress = isCompleted ? 100 : (currentQuestionIndex / totalQuestions) * 100;
-
-  const submitAnswers = async (answers: UserAnswer[]) => {
-    setIsSubmitting(true);
-    setError(null);
-    
-    try {
-      const submissionData: SubmissionData = {
-        answers: answers
-      };
-      
-      const response = await submitAssessment(submissionData);
-      console.log('Submission response:', response);
-      setIsSubmitting(false);
-    } catch (err) {
-      console.error('Error submitting assessment:', err);
-      setIsSubmitting(false);
-      setError('There was an error submitting your answers. Please try again.');
-    }
-  };
-
-  const handleAnswer = async (value: number) => {
-    const newAnswer: UserAnswer = {
-      value,
-      question_id: currentQuestion.question_id
-    };
-
-    const updatedAnswers = [...userAnswers, newAnswer];
-    setUserAnswers(updatedAnswers);
-
-    if (currentQuestionIndex < totalQuestions - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
-    } else {
-      setIsCompleted(true);
-      await submitAnswers(updatedAnswers);
-    }
-  };
-
-  const handleRetry = () => {
-    submitAnswers(userAnswers);
-  };
+  // If there are no questions, show a message
+  if (!currentQuestion || totalQuestions === 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600 mb-4">No questions available in this screener.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header displayName={screenerConfig.content.display_name} fullName={screenerConfig.full_name} />
-      
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-2xl">
-        <ProgressBar progress={progress} />
+    <ErrorBoundary>
+      <div className="min-h-screen flex flex-col">
+        <Header displayName={screenerConfig.content.display_name} fullName={screenerConfig.full_name} />
         
-        {!isCompleted ? (
-          <QuestionScreen 
-            question={currentQuestion}
-            questionNumber={currentQuestionIndex + 1}
-            totalQuestions={totalQuestions}
-            sectionTitle={section.title}
-            answers={section.answers}
-            onAnswer={handleAnswer}
-          />
-        ) : (
-          <CompletionScreen 
-            isSubmitting={isSubmitting} 
-            error={error}
-            onRetry={handleRetry}
-          />
-        )}
-      </main>
-      
-      <footer className="py-4 text-center text-sm text-gray-500">
-        <p>&copy; 2025 Blueprint</p>
-      </footer>
-    </div>
+        <main className="flex-1 container mx-auto px-4 py-8 max-w-2xl">
+          <ProgressBar progress={progress} />
+          
+          {!isCompleted ? (
+            <QuestionScreen 
+              question={currentQuestion}
+              questionNumber={currentQuestionIndex + 1}
+              totalQuestions={totalQuestions}
+              sectionTitle={sectionTitle}
+              answers={sectionAnswers}
+              onAnswer={handleAnswer}
+            />
+          ) : (
+            <CompletionScreen 
+              isSubmitting={isSubmitting} 
+              error={submissionError}
+              onRetry={handleRetry}
+            />
+          )}
+        </main>
+        
+        <footer className="py-4 text-center text-sm text-gray-500">
+          <p>&copy; 2025 Blueprint</p>
+        </footer>
+      </div>
+    </ErrorBoundary>
   );
 }
 

@@ -36,3 +36,13 @@ export interface UserAnswer {
 export interface SubmissionData {
   answers: UserAnswer[];
 }
+
+export interface AssessmentResult {
+  results: string[];
+}
+
+export interface ApiError {
+  message: string;
+  code?: string;
+  status?: number;
+}
