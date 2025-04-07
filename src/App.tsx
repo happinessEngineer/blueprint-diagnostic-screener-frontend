@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Screener } from './types';
 import ProgressBar from './components/ProgressBar';
 import QuestionScreen from './components/QuestionScreen';
